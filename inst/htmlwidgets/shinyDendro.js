@@ -40,11 +40,15 @@ HTMLWidgets.widget({
 		var invOrder = null;
 		var tree = null;
 
+		// input state
+		var currentCluster = ' ';
+
 		// output data
 		var assignment = null;
 
 		// paper.js
 		var P = null;
+		var PTool = null;
 
 		// helper functions
 		function merge2tree(i) {
@@ -143,14 +147,44 @@ HTMLWidgets.widget({
 		}
 
 		function paintTree(i) {
-			//TODO replace by assignment assignment
-			tree[i].rectangle.style.fillColor='red';
-			P.view.update();
+			var queue=[i];
+			while(queue.length>0) {
+				var cur=queue.shift();
+				var ct=tree[cur];
+				for(ch in ct.children) queue.push(ct.children[ch]);
+				if(ct.clusterId===null) continue;
+				assignment[ct.clusterId]=currentCluster;
+			}
+			sendOutput();
+			set_cluster_colors();
 		}
 
 		function set_cluster_colors() {
-			for(var i=0; i<2*nitems-1; ++i) {
-				//TODO
+			var nTree=2*nitems-1;
+			var assignments=new Array(nTree);
+			for(var i=0; i<nitems; ++i) assignments[i]=assignment[i];
+			for(var i=nitems; i<2*nitems-1; ++i) {
+				var ct=tree[i];
+				if(ct.children.length==0) {
+					assignments[i]=' ';
+					continue;
+				}
+				var a=assignments[ct.children[0]];
+				for(var j=1; j<ct.children.length; ++j)
+					if(a!=assignments[ct.children[j]]) a=' ';
+				assignments[i]=a;
+			}
+
+			var colLetters = Array.from(new Set(assignment.filter(function(a){return a!=' ';}))).sort();
+			var invColLetters = new Map();
+			for(i=0;i<colLetters.length;++i) invColLetters[colLetters[i]]=i;
+			var cols = clusterColors(colLetters.length);
+			var uc = unassignedColor();
+			for(var i=0; i<nTree; ++i) {
+				if(assignments[i]==' ')
+					tree[i].rectangle.style.fillColor=uc;
+				else
+					tree[i].rectangle.style.fillColor=cols[invColLetters[assignments[i]]];
 			}
 
 			P.view.update();
@@ -224,6 +258,17 @@ HTMLWidgets.widget({
 					P.setup(el);
 					P.view.autoUpdate=false;
 
+					PTool = new P.Tool();
+					PTool.onKeyDown = function(event) {
+						if(event.key=='space') currentCluster = ' ';
+						else if(event.key.length==1 && (
+							event.key >= 'a' && event.key <= 'z' ||
+							event.key >= '0' && event.key <= '9'))
+							currentCluster = event.key;
+						//TODO perhaps redraw something?
+						return false;
+					};
+
 					/*el.addEventListener('click', function(x) {
 						P.project.activeLayer.clear();
 						//Shiny.onInputChange(inputId, clickCnt);
@@ -238,9 +283,7 @@ HTMLWidgets.widget({
       },
 
       resize: function(width, height) {
-
-        // TODO like what, redraw()?
-
+        redraw();
       }
 
     };

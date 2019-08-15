@@ -2,16 +2,20 @@
 devtools::install()
 
 set.seed(1)
-d <- as.matrix(data.frame(v1=rnorm(100),v2=rnorm(100)))
-clust <- hclust(dist(d, method='manhattan'), method='average')
+d <- iris[,1:4]
+e <- prcomp(d)$x[,1:2]
+#clust <- hclust(dist(d, method='manhattan'), method='average')
+clust <- mhca::mhclust(d)
 
 library(shiny)
 library(shinyDendro)
 
 ui <- fluidPage(
   titlePanel("shinyDendro test"),
-  shinyDendroOutput('sdTest', width='30em', height='30em'),
-  plotOutput('sdPlot', width='30em', height='30em')
+  fluidRow(
+  column(6,shinyDendroOutput('sdTest', width='40em', height='40em')),
+  column(6,plotOutput('sdPlot', width='40em', height='40em'))
+  )
 )
 
 server <- function(input, output) {
@@ -25,7 +29,7 @@ server <- function(input, output) {
   )
   output$sdPlot <- renderPlot(
     if(!is.null(input$sdClusters))
-      EmbedSOM::PlotEmbed(d, clust=as.numeric(factor(input$sdClusters)))
+      EmbedSOM::PlotEmbed(e, pch=19, clust=as.numeric(factor(input$sdClusters)))
     else NULL
   )
 }
