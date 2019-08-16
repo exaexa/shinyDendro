@@ -22,7 +22,7 @@ server <- function(input, output) {
   output$sdTest <- renderShinyDendro(
     shinyDendro(
       'sdClusters',
-      clust$height,
+      sqrt(clust$height),
       clust$merge,
       clust$order,
       scaleCols(d)

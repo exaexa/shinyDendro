@@ -167,6 +167,7 @@ HTMLWidgets.widget({
 					r.pivot = new P.Point(-0.5,-nitems/2.0); //oh you.
 					r.position = new P.Point(bandsStart.width + bandSize*(2+i), bandsStart.height);
 					r.scale(bandSize,bandsSize.height/nitems);
+					r.smoothing=false;
 
 					/* This is moved to R part
 					var min=heatmap[0][i];
@@ -257,22 +258,42 @@ HTMLWidgets.widget({
 		}
 
 		function redrawActiveMark() {
-			console.log(PActiveMark.content);
-			console.log("redraw!");
-			PActiveMark.content=currentCluster;
-			console.log(PActiveMark.content);
+			PActiveMark.content = currentCluster;
+			PActiveRect.style.strokeColor = (currentCluster==' ')?unassignedColor():'black';
 			P.view.update();
 		}
 
 		function redrawMarkLegend() {
-			col=gatherClusterColors(assignment);
-			console.log(col);
+			var col=gatherClusterColors(assignment);
+
+			PLegendGroup.removeChildren();
+			
+			var start=border+bandSize;
+			var size=P.view.size.height-start-border;
+
+			var sizeForLetter=size/((col.letters.length==0) ? 1 : col.letters.length);
+			if(sizeForLetter>bandSize) sizeForLetter=bandSize;
+
+			for(var i=0; i<col.letters.length; ++i) {
+				var r = new P.Path.Rectangle(border, start+i*sizeForLetter,legendSize,legendSize);
+				console.log(r);
+				var c = col.colors[i];
+				r.style.fillColor = c;
+				PLegendGroup.addChild(r);
+				var t = new P.PointText(new P.Point(r.position.x, r.position.y+legendSize*.5*.66));
+				t.content=col.letters[i];
+				t.justification='center';
+				t.fontSize=(legendSize*.66)+'px';
+				var approxBrightness = c.red*c.red*.241 + c.green*c.green*.691 + c.blue*c.blue*.068;
+				t.fillColor=(approxBrightness>0.4)?'black':'white';
+				PLegendGroup.addChild(t);
+			}
 		}
 
 		// Color handling
 
 		function unassignedColor() {
-			return new P.Color('#e0e0e0');
+			return new P.Color('#f0f0f0');
 		}
 
 		function clusterColors(nclust) {
