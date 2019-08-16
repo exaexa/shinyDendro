@@ -13,8 +13,8 @@ library(shinyDendro)
 ui <- fluidPage(
   titlePanel("shinyDendro test"),
   fluidRow(
-  column(6,shinyDendroOutput('sdTest', width='40em', height='40em')),
-  column(6,plotOutput('sdPlot', width='40em', height='40em'))
+  column(6,shinyDendroOutput('sdTest', width='50em', height='50em')),
+  column(6,plotOutput('sdPlot', width='50em', height='50em'))
   )
 )
 
@@ -24,12 +24,13 @@ server <- function(input, output) {
       'sdClusters',
       clust$height,
       clust$merge,
-      clust$order
+      clust$order,
+      scaleCols(d)
     )
   )
   output$sdPlot <- renderPlot(
     if(!is.null(input$sdClusters))
-      EmbedSOM::PlotEmbed(e, pch=19, clust=as.numeric(factor(input$sdClusters)))
+      EmbedSOM::PlotEmbed(e, alpha=.3, pch=19, clust=as.numeric(factor(input$sdClusters)))
     else NULL
   )
 }

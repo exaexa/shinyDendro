@@ -34,6 +34,8 @@ HTMLWidgets.widget({
 		var height = null;
 		var merge = null;
 		var order = null;
+		var heatmap = null;
+		var heatmapNames = null;
 
 		// derived data
 		var nitems = null;
@@ -49,6 +51,14 @@ HTMLWidgets.widget({
 		// paper.js
 		var P = null;
 		var PTool = null;
+		var PActiveRect = null;
+		var PActiveMark = null;
+		var PLegendGroup = null;
+
+		// constants for drawing
+		var border=2;
+		var bandSize=30;
+		var legendSize=bandSize*0.9;
 
 		// helper functions
 		function merge2tree(i) {
@@ -64,7 +74,14 @@ HTMLWidgets.widget({
 			height = x.height;
 			merge = x.merge;
 			order = x.order.map(i => i-1);
-
+			if('heatmap' in x) {
+				heatmap = x.heatmap;
+				heatmapNames = x.heatmapNames;
+			} else {
+				heatmap = [];
+				heatmapNames = [];
+			}
+				
 			nitems = order.length;
 
 			// order :: Position -> ClusterID
@@ -100,18 +117,20 @@ HTMLWidgets.widget({
 		function redraw() {
 				P.project.activeLayer.clear();
 				
-				var treeBorder=5;
-				var bandSize=30;
 				var bands=2;
+				bands += heatmapNames.length;
 
-				var treeStart=new P.Size(treeBorder, treeBorder);
-				var treeSize=new P.Size(P.view.size.width-2*treeBorder-bands*bandSize, P.view.size.height-2*treeBorder);
+				var treeStart=new P.Size(border+bandSize, border);
+				var treeSize=new P.Size(P.view.size.width-2*border-(bands+1)*bandSize, P.view.size.height-2*border);
+				var bandsStart=new P.Size(treeStart.width+treeSize.width, treeStart.height);
+				var bandsSize=new P.Size(bandSize*(bands-2), treeSize.height);
 
 				var nTree=2*nitems-1;
 				var maxH=tree[nTree-1].height;
 
 				var uc = unassignedColor();
 
+				// draw the tree
 				for(var i=nTree-1; i>=0; --i) {
 					var w=treeSize.width*tree[i].height/maxH;
 					var h=treeSize.height*(tree[i].end-tree[i].start)/nitems;
@@ -135,7 +154,6 @@ HTMLWidgets.widget({
 
 					r.dendroTreeId = i;
 					r.onMouseDown = function(event){
-						console.log(this.dendroTreeId);
 						paintTree(this.dendroTreeId);
 						return false;
 					};
@@ -143,7 +161,42 @@ HTMLWidgets.widget({
 					tree[i].rectangle=r;
 				}
 
-				P.view.update();
+				// create rasters for the bands and draw them
+				for(var i=0; i<heatmapNames.length; ++i) {
+					var r = new P.Raster(new P.Size(1,nitems));
+					r.pivot = new P.Point(-0.5,-nitems/2.0); //oh you.
+					r.position = new P.Point(bandsStart.width + bandSize*(2+i), bandsStart.height);
+					r.scale(bandSize,bandsSize.height/nitems);
+
+					/* This is moved to R part
+					var min=heatmap[0][i];
+					var max=min;
+					for(var j=1;j<nitems;++j) {
+						var tmp=heatmap[j][i];
+						if(tmp>max) max=tmp;
+						if(tmp<min) min=tmp;
+					}
+					var scale=max-min;
+					if(scale==0) scale=1;*/
+					for(var j=0;j<nitems;++j) {
+						r.setPixel(0,invOrder[j],expressionColor(heatmap[j][i]));
+					}
+				}
+
+				// create a rectangle for drawing the active cluster mark
+				PActiveRect = new P.Path.Rectangle(border,border,legendSize,legendSize);
+				PActiveRect.style={strokeColor: 'black'};
+
+				PActiveMark = new P.PointText(new P.Point(PActiveRect.position.x, PActiveRect.position.y+legendSize*.5*.66));
+				PActiveMark.justification='center';
+				PActiveMark.fontSize=(legendSize*.66)+'px';
+				PActiveMark.fillColor='black';
+				PActiveMark.content='???';
+
+				PLegendGroup = new P.Group();
+
+				redrawMarkLegend();
+				redrawActiveMark(); //updates the view for us
 		}
 
 		function paintTree(i) {
@@ -156,10 +209,24 @@ HTMLWidgets.widget({
 				assignment[ct.clusterId]=currentCluster;
 			}
 			sendOutput();
-			set_cluster_colors();
+			showClusterColors();
 		}
 
-		function set_cluster_colors() {
+		function gatherClusterColors(assignment) {
+			var colLetters = Array.from(new Set(assignment.filter(function(a){return a!=' ';}))).sort();
+			var invColLetters = new Map();
+			for(var i=0;i<colLetters.length;++i) invColLetters[colLetters[i]]=i;
+			var cols = clusterColors(colLetters.length);
+			var uc = unassignedColor();
+			return {
+				letters: colLetters,
+				lookup: invColLetters,
+				colors: cols,
+				uncolor: uc,
+			};
+		}
+
+		function showClusterColors() {
 			var nTree=2*nitems-1;
 			var assignments=new Array(nTree);
 			for(var i=0; i<nitems; ++i) assignments[i]=assignment[i];
@@ -175,19 +242,31 @@ HTMLWidgets.widget({
 				assignments[i]=a;
 			}
 
-			var colLetters = Array.from(new Set(assignment.filter(function(a){return a!=' ';}))).sort();
-			var invColLetters = new Map();
-			for(i=0;i<colLetters.length;++i) invColLetters[colLetters[i]]=i;
-			var cols = clusterColors(colLetters.length);
-			var uc = unassignedColor();
+			col = gatherClusterColors(assignment);
 			for(var i=0; i<nTree; ++i) {
 				if(assignments[i]==' ')
-					tree[i].rectangle.style.fillColor=uc;
+					tree[i].rectangle.style.fillColor=col.uncolor;
 				else
-					tree[i].rectangle.style.fillColor=cols[invColLetters[assignments[i]]];
+					tree[i].rectangle.style.fillColor=col.colors[col.lookup[assignments[i]]];
+				if(i<nitems)
+					tree[i].rectangle.style.strokeColor=tree[i].rectangle.style.fillColor;
 			}
 
+			redrawMarkLegend();
 			P.view.update();
+		}
+
+		function redrawActiveMark() {
+			console.log(PActiveMark.content);
+			console.log("redraw!");
+			PActiveMark.content=currentCluster;
+			console.log(PActiveMark.content);
+			P.view.update();
+		}
+
+		function redrawMarkLegend() {
+			col=gatherClusterColors(assignment);
+			console.log(col);
 		}
 
 		// Color handling
@@ -260,19 +339,20 @@ HTMLWidgets.widget({
 
 					PTool = new P.Tool();
 					PTool.onKeyDown = function(event) {
-						if(event.key=='space') currentCluster = ' ';
-						else if(event.key.length==1 && (
+						if(event.key=='space') {
+							currentCluster = ' ';
+							redrawActiveMark();
+							return false;
+						}
+						if(event.key.length==1 && (
 							event.key >= 'a' && event.key <= 'z' ||
-							event.key >= '0' && event.key <= '9'))
+							event.key >= '0' && event.key <= '9')) {
 							currentCluster = event.key;
-						//TODO perhaps redraw something?
-						return false;
+							redrawActiveMark();
+							return false;
+						}
+						return true;
 					};
-
-					/*el.addEventListener('click', function(x) {
-						P.project.activeLayer.clear();
-						//Shiny.onInputChange(inputId, clickCnt);
-					})*/
 				}
 
 				initData(x);

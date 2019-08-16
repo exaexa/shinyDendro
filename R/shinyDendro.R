@@ -5,15 +5,19 @@
 #' @import htmlwidgets
 #'
 #' @export
-shinyDendro <- function(inputId, cl_height, merge, order, width = NULL, height = NULL, elementId = NULL) {
+shinyDendro <- function(inputId, cl_height, merge, order, heatmap = NULL, width = NULL, height = NULL, elementId = NULL) {
 
   # forward options using x
   x = list(
     inputId = inputId,
     height=cl_height,
     merge=merge,
-    order=order
-  )
+    order=order)
+
+  if(!is.null(heatmap)) {
+    x$heatmap <- as.matrix(heatmap)
+    x$heatmapNames <- colnames(heatmap)
+  }
 
   # create widget
   htmlwidgets::createWidget(
