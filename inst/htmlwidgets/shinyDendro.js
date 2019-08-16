@@ -182,13 +182,48 @@ HTMLWidgets.widget({
 					for(var j=0;j<nitems;++j) {
 						r.setPixel(0,invOrder[j],expressionColor(heatmap[j][i]));
 					}
+
+					var tp =new P.Point(
+						r.position.x+bandSize*.66,
+						bandsStart.height+bandsSize.height-border);
+					var t = new P.PointText(tp);
+					t.content = heatmapNames[i];
+					t.justification='left';
+					t.fontSize=(bandSize*.66)+'px';
+					t.fillColor='white';
+					t.rotate(270, tp);
+					t.style={
+						shadowColor:'black',
+						shadowBlur:2
+					};
+					console.log(t);
+
+					r.dendroTextLabel=t;
+					r.onMouseEnter = function(event) {
+						this.dendroTextLabel.visible=false;
+						P.view.update();
+					}
+					r.onMouseLeave = function(event) {
+						this.dendroTextLabel.visible=true;
+						P.view.update();
+					}
+					t.onMouseEnter = function(event) {
+						this.visible=false;
+						P.view.update();
+					}
+					t.onMouseLeave = function(event) {
+						this.visible=true;
+						P.view.update();
+					}
 				}
 
 				// create a rectangle for drawing the active cluster mark
 				PActiveRect = new P.Path.Rectangle(border,border,legendSize,legendSize);
 				PActiveRect.style={strokeColor: 'black'};
 
-				PActiveMark = new P.PointText(new P.Point(PActiveRect.position.x, PActiveRect.position.y+legendSize*.5*.66));
+				PActiveMark = new P.PointText(new P.Point(
+					PActiveRect.position.x,
+					PActiveRect.position.y+legendSize*.5*.66));
 				PActiveMark.justification='center';
 				PActiveMark.fontSize=(legendSize*.66)+'px';
 				PActiveMark.fillColor='black';

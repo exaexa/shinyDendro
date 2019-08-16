@@ -4,8 +4,8 @@ devtools::install()
 set.seed(1)
 d <- iris[,1:4]
 e <- prcomp(d)$x[,1:2]
-#clust <- hclust(dist(d, method='manhattan'), method='average')
-clust <- mhca::mhclust(d)
+
+scaleCols <- function(x) apply(x, 2, function(col)(col-min(col))/(max(col)-min(col)))
 
 library(shiny)
 library(shinyDendro)
