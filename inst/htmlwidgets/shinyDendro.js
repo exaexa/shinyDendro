@@ -34,7 +34,7 @@ HTMLWidgets.widget({
 		var height = null;
 		var merge = null;
 		var order = null;
-		var heatmap = null;
+		var heatmapColors = null;
 		var heatmapNames = null;
 
 		// derived data
@@ -75,10 +75,10 @@ HTMLWidgets.widget({
 			merge = x.merge;
 			order = x.order.map(i => i-1);
 			if('heatmap' in x) {
-				heatmap = x.heatmap;
+				heatmapColors = x.heatmap;
 				heatmapNames = x.heatmapNames;
 			} else {
-				heatmap = [];
+				heatmapColors = [];
 				heatmapNames = [];
 			}
 				
@@ -180,7 +180,7 @@ HTMLWidgets.widget({
 					var scale=max-min;
 					if(scale==0) scale=1;*/
 					for(var j=0;j<nitems;++j) {
-						r.setPixel(0,invOrder[j],expressionColor(heatmap[j][i]));
+						r.setPixel(0,invOrder[j],heatmapColors[j][i]);
 					}
 
 					var tp =new P.Point(
@@ -194,19 +194,12 @@ HTMLWidgets.widget({
 					t.rotate(270, tp);
 					t.style={
 						shadowColor:'black',
-						shadowBlur:2
+						shadowBlur:1
 					};
 					console.log(t);
 
 					r.dendroTextLabel=t;
-					r.onMouseEnter = function(event) {
-						this.dendroTextLabel.visible=false;
-						P.view.update();
-					}
-					r.onMouseLeave = function(event) {
-						this.dendroTextLabel.visible=true;
-						P.view.update();
-					}
+					/* TODO is this needed?
 					t.onMouseEnter = function(event) {
 						this.visible=false;
 						P.view.update();
@@ -214,7 +207,7 @@ HTMLWidgets.widget({
 					t.onMouseLeave = function(event) {
 						this.visible=true;
 						P.view.update();
-					}
+					} */
 				}
 
 				// create a rectangle for drawing the active cluster mark
@@ -342,47 +335,6 @@ HTMLWidgets.widget({
 			}
 			return cols;
 		}	
-
-		var expressionColorCount = 100;
-		var expressionColorCache = null;
-
-		function expressionColor(val) {
-			if(expressionColorCache===null) {
-				expressionColorCache = new Array(expressionColorCount);
-				var origColors=[
-					"#A50026",
-					"#D73027",
-					"#F46D43",
-					"#FDAE61",
-					"#FEE090",
-					"#FFFFA8",
-					"#B8D9C8",
-					"#91C3E2",
-					"#649DD1",
-					"#3565B4",
-					"#212695"].map(function(str){return new P.Color(str)});
-
-				var nOrigs=origColors.length;
-
-				for(var i=0; i<expressionColorCount; ++i) {
-					var q=i/(expressionColorCount-1);
-					if(q<0)q=0;
-					if(q>1)q=1;
-					var slice=q*(nOrigs-1);
-					q=slice-Math.trunc(slice);
-					slice=Math.trunc(slice);
-					if(slice>=nOrigs-1)
-					expressionColorCache[i]=origColors[nOrigs-1];
-					else
-					expressionColorCache[i]=new P.Color(
-						origColors[slice].red*(1-q)+origColors[slice+1].red*q,
-						origColors[slice].green*(1-q)+origColors[slice+1].green*q,
-						origColors[slice].blue*(1-q)+origColors[slice+1].blue*q);
-				}
-			}
-
-			return expressionColorCache[Math.round((expressionColorCount-1)*val)];
-		}
 
     return {
 
