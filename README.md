@@ -10,6 +10,9 @@ something like this:
 
 ![Screenshot](media/screenshot.png "Screenshot")
 
+A video with a common use case should be available here:
+https://www.youtube.com/watch?v=MJgbCG8grTU
+
 ## Controls
 
 - keys `a` to `z` and `0` to `9` select a cluster mark
