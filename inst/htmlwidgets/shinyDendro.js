@@ -1,12 +1,15 @@
 HTMLWidgets.widget({
 
-  name: 'shinyDendro',
+	name: 'shinyDendro',
 
-  type: 'output',
+	type: 'output',
 
-  factory: function(el, width, height) {
+	factory: function(el, width, height) {
 
-	  // tree element classes
+		/*
+		 * tree element classes
+		 */
+
 		function Leaf(pos, cl){
 			this.start=pos;
 			this.end=pos+1;
@@ -19,26 +22,29 @@ HTMLWidgets.widget({
 		function Branch(height, fst, fstId, snd, sndId) {
 			this.start=fst.start;
 			this.end=snd.end;
-			//this.start=(fst.start+fst.end)/2;
-			//this.end=(snd.start+snd.end)/2;
 			this.height=height;
 			this.children=[fstId, sndId];
 			this.clusterId=null;
 			this.rectangle=null;
 		}
 
-    // instance output (Shiny input)
+		/*
+		 * Instance data
+		 */
+
+		// instance output (Shiny input)
 		var inputId = null;
 
 		// inputs from clustering
 		var height = null;
 		var merge = null;
 		var order = null;
+		var nHeatmaps = null;
 		var heatmapColors = null;
 		var heatmapNames = null;
 
 		// derived data
-		var nitems = null;
+		var nItems = null;
 		var invOrder = null;
 		var tree = null;
 
@@ -60,10 +66,20 @@ HTMLWidgets.widget({
 		var bandSize=30;
 		var legendSize=bandSize*0.9;
 
-		// helper functions
+		/*
+		 * Data initialization/sending
+		 */
+
 		function merge2tree(i) {
 			if(i<0) return -1 - i;
-			else return nitems + i - 1;
+			else return nItems + i - 1;
+		}
+
+		function arrays_equal(x,y) {
+			// javascript standard library is so comprehensive!
+			if ((x instanceof Array) && (y instanceof Array))
+				return (x.length === y.length) && x.every((v,idx) => arrays_equal(v, y[idx]));
+			else return x===y;
 		}
 
 		function initData(x)
@@ -71,39 +87,49 @@ HTMLWidgets.widget({
 			// feed in the input data
 			inputId = x.inputId;
 
+			// check if we need to reset the assignment b/c input totally changed
+			var needsReset = !(
+				arrays_equal(order, x.order.map(i => i-1)) &&
+				arrays_equal(height, x.height) &&
+				arrays_equal(merge, x.merge));
+
 			height = x.height;
 			merge = x.merge;
 			order = x.order.map(i => i-1);
-			if('heatmap' in x) {
-				heatmapColors = x.heatmap;
-				heatmapNames = x.heatmapNames;
+
+			nItems = order.length;
+
+			nHeatmaps = x.heatmapCount
+			if(nHeatmaps>0) {
+				heatmapColors = x.heatmap
+				heatmapNames = x.heatmapNames
 			} else {
 				heatmapColors = [];
 				heatmapNames = [];
 			}
-				
-			nitems = order.length;
 
 			// order :: Position -> ClusterID
 			// invOrder :: ClusterID -> Position
-			invOrder = new Array(nitems);
-			for(var i=0;i<nitems;++i)
+			invOrder = new Array(nItems);
+			for(var i=0;i<nItems;++i)
 				invOrder[order[i]]=i;
 
-			assignment = new Array(nitems);
-			for(var i=0;i<nitems;++i)
-				assignment[i]=' ';
+			if(needsReset || assignment===null) {
+				assignment = new Array(nItems);
+				for(var i=0;i<nItems;++i)
+					assignment[i]=' ';
+			}
 
-			tree = new Array(2*nitems-1);
+			tree = new Array(2*nItems-1);
 			// fill in the leaves
-			for(var i=0;i<nitems;++i)
+			for(var i=0;i<nItems;++i)
 				tree[i]=new Leaf(invOrder[i], i);
 
 			// branches
-			for(var i=0; i<nitems-1; ++i) {
+			for(var i=0; i<nItems-1; ++i) {
 				var l=merge2tree(merge[i][0]);
 				var r=merge2tree(merge[i][1]);
-				tree[nitems+i]=new Branch(
+				tree[nItems+i]=new Branch(
 					height[i],
 					tree[l], l,
 					tree[r], r);
@@ -114,18 +140,28 @@ HTMLWidgets.widget({
 			Shiny.onInputChange(inputId, assignment);
 		}
 
+		/*
+		 * Drawing function
+		 */
+
 		function redraw() {
 				P.project.activeLayer.clear();
 				
 				var bands=2;
-				bands += heatmapNames.length;
+				bands += nHeatmaps;
 
 				var treeStart=new P.Size(border+bandSize, border);
-				var treeSize=new P.Size(P.view.size.width-2*border-(bands+1)*bandSize, P.view.size.height-2*border);
-				var bandsStart=new P.Size(treeStart.width+treeSize.width, treeStart.height);
-				var bandsSize=new P.Size(bandSize*(bands-2), treeSize.height);
+				var treeSize=new P.Size(
+					P.view.size.width-2*border-(bands+1)*bandSize,
+					P.view.size.height-2*border);
+				var bandsStart=new P.Size(
+					treeStart.width+treeSize.width,
+					treeStart.height);
+				var bandsSize=new P.Size(
+					bandSize*(bands-2),
+					treeSize.height);
 
-				var nTree=2*nitems-1;
+				var nTree=2*nItems-1;
 				var maxH=tree[nTree-1].height;
 
 				var uc = unassignedColor();
@@ -133,12 +169,12 @@ HTMLWidgets.widget({
 				// draw the tree
 				for(var i=nTree-1; i>=0; --i) {
 					var w=treeSize.width*tree[i].height/maxH;
-					var h=treeSize.height*(tree[i].end-tree[i].start)/nitems;
-					var isBranch = i >= nitems;
+					var h=treeSize.height*(tree[i].end-tree[i].start)/nItems;
+					var isBranch = i >= nItems;
 					
 					var r=new P.Path.Rectangle(
 						treeStart.width+treeSize.width-w+(isBranch?0:bandSize),
-						treeStart.height+treeSize.height*tree[i].start/nitems,
+						treeStart.height+treeSize.height*tree[i].start/nItems,
 						isBranch ? w+bandSize*1.5 : w+bandSize, h, isBranch?10:0);
 
 					if(isBranch) r.style={
@@ -162,24 +198,14 @@ HTMLWidgets.widget({
 				}
 
 				// create rasters for the bands and draw them
-				for(var i=0; i<heatmapNames.length; ++i) {
-					var r = new P.Raster(new P.Size(1,nitems));
-					r.pivot = new P.Point(-0.5,-nitems/2.0); //oh you.
+				for(var i=0; i<nHeatmaps; ++i) {
+					var r = new P.Raster(new P.Size(1,nItems));
+					r.pivot = new P.Point(-0.5,-nItems/2.0); //oh you.
 					r.position = new P.Point(bandsStart.width + bandSize*(2+i), bandsStart.height);
-					r.scale(bandSize,bandsSize.height/nitems);
+					r.scale(bandSize,bandsSize.height/nItems);
 					r.smoothing=false;
 
-					/* This is moved to R part
-					var min=heatmap[0][i];
-					var max=min;
-					for(var j=1;j<nitems;++j) {
-						var tmp=heatmap[j][i];
-						if(tmp>max) max=tmp;
-						if(tmp<min) min=tmp;
-					}
-					var scale=max-min;
-					if(scale==0) scale=1;*/
-					for(var j=0;j<nitems;++j) {
+					for(var j=0;j<nItems;++j) {
 						r.setPixel(0,invOrder[j],heatmapColors[j][i]);
 					}
 
@@ -196,18 +222,6 @@ HTMLWidgets.widget({
 						shadowColor:'black',
 						shadowBlur:1
 					};
-					console.log(t);
-
-					r.dendroTextLabel=t;
-					/* TODO is this needed?
-					t.onMouseEnter = function(event) {
-						this.visible=false;
-						P.view.update();
-					}
-					t.onMouseLeave = function(event) {
-						this.visible=true;
-						P.view.update();
-					} */
 				}
 
 				// create a rectangle for drawing the active cluster mark
@@ -224,9 +238,14 @@ HTMLWidgets.widget({
 
 				PLegendGroup = new P.Group();
 
+				showClusterColors();
 				redrawMarkLegend();
 				redrawActiveMark(); //updates the view for us
 		}
+
+		/*
+		 * Click handling
+		 */
 
 		function paintTree(i) {
 			var queue=[i];
@@ -256,10 +275,10 @@ HTMLWidgets.widget({
 		}
 
 		function showClusterColors() {
-			var nTree=2*nitems-1;
+			var nTree=2*nItems-1;
 			var assignments=new Array(nTree);
-			for(var i=0; i<nitems; ++i) assignments[i]=assignment[i];
-			for(var i=nitems; i<2*nitems-1; ++i) {
+			for(var i=0; i<nItems; ++i) assignments[i]=assignment[i];
+			for(var i=nItems; i<2*nItems-1; ++i) {
 				var ct=tree[i];
 				if(ct.children.length==0) {
 					assignments[i]=' ';
@@ -277,13 +296,18 @@ HTMLWidgets.widget({
 					tree[i].rectangle.style.fillColor=col.uncolor;
 				else
 					tree[i].rectangle.style.fillColor=col.colors[col.lookup[assignments[i]]];
-				if(i<nitems)
+
+				if(i<nItems)
 					tree[i].rectangle.style.strokeColor=tree[i].rectangle.style.fillColor;
 			}
 
 			redrawMarkLegend();
 			P.view.update();
 		}
+
+		/*
+		 * Legend and active mark display
+		 */
 
 		function redrawActiveMark() {
 			PActiveMark.content = currentCluster;
@@ -304,7 +328,6 @@ HTMLWidgets.widget({
 
 			for(var i=0; i<col.letters.length; ++i) {
 				var r = new P.Path.Rectangle(border, start+i*sizeForLetter,legendSize,legendSize);
-				console.log(r);
 				var c = col.colors[i];
 				r.style.fillColor = c;
 				PLegendGroup.addChild(r);
@@ -318,9 +341,12 @@ HTMLWidgets.widget({
 			}
 		}
 
-		// Color handling
+		/*
+		 * Color handling
+		 */
 
 		function unassignedColor() {
+			// this could be white, but I like this better
 			return new P.Color('#f0f0f0');
 		}
 
@@ -336,9 +362,12 @@ HTMLWidgets.widget({
 			return cols;
 		}	
 
-    return {
+		/*
+		 * Finally, pack everything up for Htmlwidgets & Shiny
+		 */
 
-      renderValue: function(x) {
+		return {
+			renderValue: function(x) {
 				// initialize Paper.js and event listeners
 				if(P===null) {
 					P = new paper.PaperScope();
@@ -365,15 +394,14 @@ HTMLWidgets.widget({
 
 				initData(x);
 
-				// set the outputs to initial values
 				sendOutput();
 				redraw();
-      },
+			},
 
-      resize: function(width, height) {
-        redraw();
-      }
+			resize: function(width, height) {
+				redraw();
+			}
 
-    };
-  }
+		};
+	}
 });

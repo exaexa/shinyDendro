@@ -14,10 +14,19 @@ shinyDendro <- function(inputId, cl_height, merge, order, heatmap = NULL, width 
     merge=merge,
     order=order)
 
-  if(!is.null(heatmap)) {
+  if(is.vector(heatmap)) stop("heatmap must be either NULL, or a matrix/data frame!")
+
+  if(is.null(heatmap)) {
+    x$heatmapCount <- 0
+  } else { #matrices and data frames
+    x$heatmapCount <- dim(heatmap)[2]
     x$heatmap <- as.matrix(heatmap)
     x$heatmapNames <- colnames(heatmap)
   }
+
+  # This is an ugly hack, but the corresponding R-easons are far more filthy.
+  x$heatmapNames = c(x$heatmapNames,
+      "R should not automatically flatten single-element vectors. Bad R!")
 
   # create widget
   htmlwidgets::createWidget(
