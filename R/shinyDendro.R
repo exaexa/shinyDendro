@@ -1,9 +1,18 @@
-#' <Add Title>
+#' shinyDendro
 #'
-#' <Add Description>
+#' Create an interactive dendrogram.
 #'
 #' @import htmlwidgets
 #'
+#' @param inputId Name of the associated reactive input
+#' @param cl_height,merge,order Heights, merge matrix and ordering of a dendrogram (as taken e.g. from hclust result).
+#' @param width,height,elementId Widget parameters
+#'
+#' @examples
+#' \donttest{
+#' cl <- hclust(dist(cbind(rnorm(100),rnorm(100))))
+#' renderShinyDendro(shinyDendro('sdClusters', cl$height, cl$merge, cl$order))
+#' }
 #' @export
 shinyDendro <- function(inputId, cl_height, merge, order, heatmap = NULL, width = NULL, height = NULL, elementId = NULL) {
 
