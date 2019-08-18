@@ -1,7 +1,7 @@
 
 # shinyDendro
 
-This provides idendro-style interactive dendrograms in R Shiny.
+This provides idendro-style interactive dendrograms in R Shiny (see https://github.com/tsieger/idendro).
 
 ## What does it look like?
 
