@@ -388,8 +388,8 @@ HTMLWidgets.widget({
 					P.view.autoUpdate=false;
 					el.tabIndex=0; //make the element focusable (it will receive keyboard events)
 
-					el.onkeydown = function() {
-						if(event.key=='space') {
+					el.onkeydown = function(event) {
+						if(event.keyCode==32) { //space
 							currentCluster = ' ';
 							redrawActiveMark();
 							return false;
