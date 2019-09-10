@@ -20,6 +20,7 @@ ui <- fluidPage(
   titlePanel("shinyDendro test"),
   selectInput('sdDisplayCols', label="Columns to display",
     choices=colnames(d), multiple=TRUE, width='20em'),
+  textInput("sdFocusTest", "Focus test", value="aaa"),
   fluidRow(
   column(4,shinyDendroOutput('sdTest', width='30em', height='30em')),
   column(4,plotOutput('sdPlot', width='30em', height='30em'))

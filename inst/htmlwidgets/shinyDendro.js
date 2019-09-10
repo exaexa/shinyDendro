@@ -56,7 +56,6 @@ HTMLWidgets.widget({
 
 		// paper.js
 		var P = null;
-		var PTool = null;
 		var PActiveRect = null;
 		var PActiveMark = null;
 		var PLegendGroup = null;
@@ -200,7 +199,7 @@ HTMLWidgets.widget({
 					r.dendroTreeId = i;
 					r.onMouseDown = function(event){
 						paintTree(this.dendroTreeId);
-						return false;
+						//return false; //TODO focus probably requires a better treatment, but this generally works
 					};
 
 					tree[i].rectangle=r;
@@ -382,9 +381,9 @@ HTMLWidgets.widget({
 					P = new paper.PaperScope();
 					P.setup(el);
 					P.view.autoUpdate=false;
+					el.tabIndex=0; //make the element focusable (it will receive keyboard events)
 
-					PTool = new P.Tool();
-					PTool.onKeyDown = function(event) {
+					el.onkeydown = function() {
 						if(event.key=='space') {
 							currentCluster = ' ';
 							redrawActiveMark();
