@@ -198,8 +198,13 @@ HTMLWidgets.widget({
 
 					r.dendroTreeId = i;
 					r.onMouseDown = function(event){
-						paintTree(this.dendroTreeId);
-						//return false; //TODO focus probably requires a better treatment, but this generally works
+						//TODO is there a better way?
+						if(document.activeElement.id==el.id)
+							paintTree(this.dendroTreeId);
+						else
+							el.focus();
+
+						return false;
 					};
 
 					tree[i].rectangle=r;
