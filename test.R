@@ -34,7 +34,8 @@ server <- function(input, output) {
       clust$height,
       clust$merge,
       clust$order,
-      colors
+      colors,
+      assignment=c("a"," ","b","c")
     )
   })
   output$sdPlot <- renderPlot(

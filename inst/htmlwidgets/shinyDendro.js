@@ -120,6 +120,15 @@ HTMLWidgets.widget({
 					assignment[i]=' ';
 			}
 
+			if('assignment' in x) {
+				for(var i=0; i<assignment.length; ++i) {
+					if(i>=x.assignment.length) break;
+					var tmp = String(x.assignment[i])
+					if(tmp.length==0) tmp=' '
+					assignment[i]=tmp[0]
+				}
+			}
+
 			tree = new Array(2*nItems-1);
 			// fill in the leaves
 			for(var i=0;i<nItems;++i)

@@ -14,7 +14,7 @@
 #' renderShinyDendro(shinyDendro('sdClusters', cl$height, cl$merge, cl$order))
 #' }
 #' @export
-shinyDendro <- function(inputId, cl_height, merge, order, heatmap = NULL, width = NULL, height = NULL, elementId = NULL) {
+shinyDendro <- function(inputId, cl_height, merge, order, heatmap = NULL, assignment=NULL, width = NULL, height = NULL, elementId = NULL) {
 
   # forward options using x
   x = list(
@@ -36,6 +36,11 @@ shinyDendro <- function(inputId, cl_height, merge, order, heatmap = NULL, width 
   # This is an ugly hack, but the corresponding R-easons are far more filthy.
   x$heatmapNames = c(x$heatmapNames,
       "R should not automatically flatten single-element vectors. Bad R!")
+
+  if(!(is.null(assignment) || is.character(assignment)))
+    stop("assignment must be either NULL or a character vector")
+
+  if(!is.null(assignment)) x$assignment <- assignment
 
   # create widget
   htmlwidgets::createWidget(
