@@ -186,6 +186,7 @@ HTMLWidgets.widget({
 			else unzoomFrom(zoomPos);
 
 			redraw();
+			return false;
 		}
 
 		/*
@@ -474,6 +475,7 @@ HTMLWidgets.widget({
 			},
 
 			resize: function(width, height) {
+				P.view.viewSize=new P.Size(width, height);
 				redraw();
 			}
 
