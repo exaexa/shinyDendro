@@ -54,6 +54,10 @@ HTMLWidgets.widget({
 		// output data
 		var assignment = null;
 
+		// zoom
+		var zoomBegin = 0;
+		var zoomEnd = 1;
+
 		// paper.js
 		var P = null;
 		var PActiveRect = null;
@@ -114,6 +118,7 @@ HTMLWidgets.widget({
 				invOrder[order[i]]=i;
 
 			if(needsReset || assignment===null) {
+				resetZoom();
 				assignment = new Array(nItems);
 				for(var i=0;i<nItems;++i)
 					assignment[i]=' ';
@@ -149,6 +154,41 @@ HTMLWidgets.widget({
 		}
 
 		/*
+		 * Zoom handling
+		 */
+
+		function resetZoom() {
+			zoomBegin = 0;
+			zoomEnd = 1;
+		}
+
+		function zoomTo(pos, ratio=0.8) {
+			zoomBegin = pos + ratio*(zoomBegin - pos);
+			zoomEnd   = pos + ratio*(zoomEnd  - pos);
+
+			if(zoomEnd<zoomBegin+0.01) zoomEnd=zoomBegin+0.01;
+			if(zoomBegin<0) zoomBegin=0;
+			if(zoomEnd>1) zoomEnd=1;
+
+			redraw();
+		}
+
+		function unzoomFrom(pos, ratio=0.8) {
+			zoomTo(pos, 1/ratio);
+		}
+
+		function handleScroll(x, y, deltaY) {
+			var zoomL = border;
+			var zoomR = P.view.size.height-border;
+			var zoomRel = (y-zoomL)/(zoomR-zoomL);
+			var zoomPos= (1-zoomRel)*zoomBegin + zoomRel*zoomEnd;
+			if(deltaY>0) zoomTo(zoomPos);
+			else unzoomFrom(zoomPos);
+
+			redraw();
+		}
+
+		/*
 		 * Drawing function
 		 */
 
@@ -158,16 +198,29 @@ HTMLWidgets.widget({
 				var bands=2;
 				bands += nHeatmaps;
 
+				//this is how it would look without any zooming.
 				var treeStart=new P.Size(border+bandSize, border);
 				var treeSize=new P.Size(
 					P.view.size.width-2*border-(bands+1)*bandSize,
 					P.view.size.height-2*border);
+
+				//calculate Y transform for zooming
+				var yscale = 1/(zoomEnd-zoomBegin);
+				var yshift = zoomBegin*treeSize.height*yscale
+
+				//transform all coords to zoomed coordinates
+				treeStart.height -= yshift;
+				treeSize.height *= yscale;
+
+				//copy the coords to bands
 				var bandsStart=new P.Size(
 					treeStart.width+treeSize.width,
 					treeStart.height);
 				var bandsSize=new P.Size(
 					bandSize*(bands-2),
 					treeSize.height);
+
+				//now we can happily continue with the actual dendrogram!
 
 				var nTree=2*nItems-1;
 				var maxH=tree[nTree-1].height;
@@ -403,6 +456,15 @@ HTMLWidgets.widget({
 						}
 						return true;
 					};
+
+					el.onwheel = function(event) {
+						var rect = el.getBoundingClientRect();
+						return handleScroll(
+							event.clientX - rect.left,
+							event.clientY - rect.top,
+							event.deltaY
+						);
+					}
 				}
 
 				initData(x);
