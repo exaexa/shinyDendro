@@ -69,6 +69,15 @@ HTMLWidgets.widget({
 		var bandSize=30;
 		var legendSize=bandSize*0.9;
 
+		// variables for drawing
+		var treeStart = null;
+		var treeSize = null;
+		var bandsOStart = null;
+		var bandsOSize = null;
+		var bandsStart = null;
+		var bandsSize = null;
+		var bandRects = null;
+
 		/*
 		 * Data initialization/sending
 		 */
@@ -170,7 +179,7 @@ HTMLWidgets.widget({
 			if(zoomBegin<0) zoomBegin=0;
 			if(zoomEnd>1) zoomEnd=1;
 
-			redraw();
+			reposition();
 		}
 
 		function unzoomFrom(pos, ratio=0.8) {
@@ -185,7 +194,6 @@ HTMLWidgets.widget({
 			if(deltaY>0) zoomTo(zoomPos);
 			else unzoomFrom(zoomPos);
 
-			redraw();
 			return false;
 		}
 
@@ -193,132 +201,189 @@ HTMLWidgets.widget({
 		 * Drawing function
 		 */
 
-		function redraw() {
-				P.project.activeLayer.clear();
-				
+		function recalcTreePosition() {
 				var bands=2;
 				bands += nHeatmaps;
 
 				//this is how it would look without any zooming.
-				var treeStart=new P.Size(border+bandSize, border);
-				var treeSize=new P.Size(
+				treeStart=new P.Size(border+bandSize, border);
+				treeSize=new P.Size(
 					P.view.size.width-2*border-(bands+1)*bandSize,
 					P.view.size.height-2*border);
 
+				//untransformed bands for positioning the band labels
+				bandsOStart=new P.Size(
+					treeStart.width+treeSize.width,
+					treeStart.height);
+				bandsOSize=new P.Size(
+					bandSize*nHeatmaps,
+					treeSize.height);
+
 				//calculate Y transform for zooming
 				var yscale = 1/(zoomEnd-zoomBegin);
-				var yshift = zoomBegin*treeSize.height*yscale
+				var yshift = zoomBegin*treeSize.height*yscale;
 
 				//transform all coords to zoomed coordinates
 				treeStart.height -= yshift;
 				treeSize.height *= yscale;
 
 				//copy the coords to bands
-				var bandsStart=new P.Size(
+				bandsStart=new P.Size(
 					treeStart.width+treeSize.width,
 					treeStart.height);
-				var bandsSize=new P.Size(
-					bandSize*(bands-2),
+				bandsSize=new P.Size(
+					bandSize*nHeatmaps,
 					treeSize.height);
+		}
 
-				//now we can happily continue with the actual dendrogram!
+		function treeRectSize(i, isBranch) {
+			var nTree=2*nItems-1;
+			var maxH=tree[nTree-1].height;
+			var w=treeSize.width*tree[i].height/maxH;
+			var h=treeSize.height*(tree[i].end-tree[i].start)/nItems;
 
-				var nTree=2*nItems-1;
-				var maxH=tree[nTree-1].height;
+			return {
+				w:isBranch ? w+bandSize*1.5 : w+bandSize,
+				h:h,
+				x:treeStart.width+treeSize.width-w+(isBranch?0:bandSize),
+				y:treeStart.height+treeSize.height*tree[i].start/nItems,
+				radius: (isBranch?10:0)
+			};
+		}
 
-				var uc = unassignedColor();
+		function treeRectangle(i, isBranch) {
+			var sz=treeRectSize(i, isBranch);
 
-				// draw the tree
-				for(var i=nTree-1; i>=0; --i) {
-					var w=treeSize.width*tree[i].height/maxH;
-					var h=treeSize.height*(tree[i].end-tree[i].start)/nItems;
-					var isBranch = i >= nItems;
-					
-					var r=new P.Path.Rectangle(
-						treeStart.width+treeSize.width-w+(isBranch?0:bandSize),
-						treeStart.height+treeSize.height*tree[i].start/nItems,
-						isBranch ? w+bandSize*1.5 : w+bandSize, h, isBranch?10:0);
+			return new P.Path.Rectangle(
+				0, 0,
+				sz.w, sz.h,
+				sz.radius);
+		}
 
-					if(isBranch) r.style={
-						strokeColor: 'black',
-						fillColor: uc,
-						strokeWidth: 1,
-					};
-					else r.style={
-						strokeColor: uc,
-						fillColor: uc,
-						strokeWidth: 1,
-					};
+		function setBandPosition(i, r) {
+			r.matrix.reset();
+			r.position = new P.Point(bandsStart.width + bandSize*(2+i), bandsStart.height);
+			r.scale(bandSize,bandsSize.height/nItems);
+		}
 
-					r.dendroTreeId = i;
-					r.onMouseDown = function(event){
-						//TODO is there a better way?
-						if(document.activeElement.id==el.id)
-							paintTree(this.dendroTreeId);
-						else
-							el.focus();
+		function setTreeRectPosition(i, r) {
+			var sz=treeRectSize(i, i >= nItems);
+			r.matrix.reset();
+			r.position = new P.Point(sz.x + sz.w/2, sz.y + sz.h/2);
+			r.scale(1,1/(zoomEnd-zoomBegin));
+		}
 
-						return false;
-					};
+		function reposition() {
+			recalcTreePosition();
 
-					tree[i].rectangle=r;
-				}
+			for(var i=0; i<nHeatmaps; ++i)
+				setBandPosition(i, bandRects[i])
 
-				// create rasters for the bands and draw them
-				for(var i=0; i<nHeatmaps; ++i) {
-					var r = new P.Raster(new P.Size(1,nItems));
-					r.pivot = new P.Point(-0.5,-nItems/2.0); //oh you.
-					r.position = new P.Point(bandsStart.width + bandSize*(2+i), bandsStart.height);
-					r.scale(bandSize,bandsSize.height/nItems);
-					r.smoothing=false;
+			var nTree=2*nItems-1;
 
-					for(var j=0;j<nItems;++j) {
-						r.setPixel(0,invOrder[j],heatmapColors[j][i]);
-					}
+			for(var i=0; i<nTree; ++i)
+				setTreeRectPosition(i, tree[i].rectangle);
 
-					var tp =new P.Point(
-						r.position.x+bandSize*.66,
-						bandsStart.height+bandsSize.height-border);
-					var t = new P.PointText(tp);
-					t.content = heatmapNames[i];
-					t.justification='left';
-					t.fontSize=(bandSize*.66)+'px';
-					t.fillColor='white';
-					t.rotate(270, tp);
-					t.style={
-						shadowColor:'black',
-						shadowBlur:1
-					};
-				}
+			P.view.update();
+		}
 
-				// create a rectangle for drawing the active cluster mark
-				PActiveRect = new P.Path.Rectangle(border,border,legendSize,legendSize);
-				PActiveRect.style={strokeColor: 'black'};
+		function redraw() {
+			P.project.activeLayer.clear();
 
-				PActiveMark = new P.PointText(new P.Point(
-					PActiveRect.position.x,
-					PActiveRect.position.y+legendSize*.5*.66));
-				PActiveMark.justification='center';
-				PActiveMark.fontSize=(legendSize*.66)+'px';
-				PActiveMark.fillColor='black';
-				PActiveMark.content='???';
+			recalcTreePosition();
 
-				PActiveRect.onMouseDown = function(event){
-					currentCluster = ' ';
-					redrawActiveMark();
-					return false;
+			var uc = unassignedColor();
+
+			// draw the tree
+			var nTree=2*nItems-1;
+			for(var i=nTree-1; i>=0; --i) {
+				var isBranch = i >= nItems;
+				var r=treeRectangle(i, isBranch);
+				r.applyMatrix=false;
+				r.strokeScaling=false;
+				tree[i].rectangle = r;
+				setTreeRectPosition(i, r);
+
+				if(isBranch) r.style={
+					strokeColor: 'black',
+					fillColor: uc,
+					strokeWidth: 1,
 				};
-				PActiveMark.onMouseDown = function(event){
-					currentCluster = ' ';
-					redrawActiveMark();
-					return false;
+				else r.style={
+					strokeColor: uc,
+					fillColor: uc,
+					strokeWidth: 1,
 				};
 
-				PLegendGroup = new P.Group();
+				r.dendroTreeId = i;
+				r.onMouseDown = function(event){
+					//TODO is there a better way?
+					if(document.activeElement.id==el.id)
+						paintTree(this.dendroTreeId);
+					else
+						el.focus();
 
-				showClusterColors();
-				redrawMarkLegend();
-				redrawActiveMark(); //updates the view for us
+					return false;
+				};
+			}
+
+			// create rasters for the bands and draw them
+			bandRects=new Array(nHeatmaps);
+			for(var i=0; i<nHeatmaps; ++i) {
+				var r = new P.Raster(new P.Size(1,nItems));
+				r.pivot = new P.Point(-0.5,-nItems/2.0); //oh you.
+				setBandPosition(i, r);
+				r.smoothing=false;
+
+				for(var j=0;j<nItems;++j) {
+					r.setPixel(0,invOrder[j],heatmapColors[j][i]);
+				}
+
+				bandRects[i]=r;
+
+				var tp =new P.Point(
+					r.position.x+bandSize*.66,
+					bandsOStart.height+bandsOSize.height-border);
+				var t = new P.PointText(tp);
+				t.content = heatmapNames[i];
+				t.justification='left';
+				t.fontSize=(bandSize*.66)+'px';
+				t.fillColor='white';
+				t.rotate(270, tp);
+				t.style={
+					shadowColor:'black',
+					shadowBlur:1
+				};
+			}
+
+			// create a rectangle for drawing the active cluster mark
+			PActiveRect = new P.Path.Rectangle(border,border,legendSize,legendSize);
+			PActiveRect.style={strokeColor: 'black'};
+
+			PActiveMark = new P.PointText(new P.Point(
+				PActiveRect.position.x,
+				PActiveRect.position.y+legendSize*.5*.66));
+			PActiveMark.justification='center';
+			PActiveMark.fontSize=(legendSize*.66)+'px';
+			PActiveMark.fillColor='black';
+			PActiveMark.content='???';
+
+			PActiveRect.onMouseDown = function(event){
+				currentCluster = ' ';
+				redrawActiveMark();
+				return false;
+			};
+			PActiveMark.onMouseDown = function(event){
+				currentCluster = ' ';
+				redrawActiveMark();
+				return false;
+			};
+
+			PLegendGroup = new P.Group();
+
+			showClusterColors();
+			redrawMarkLegend();
+			redrawActiveMark(); //updates the view for us
 		}
 
 		/*
@@ -397,7 +462,7 @@ HTMLWidgets.widget({
 			var col=gatherClusterColors(assignment);
 
 			PLegendGroup.removeChildren();
-			
+
 			var start=border+bandSize;
 			var size=P.view.size.height-start-border;
 
@@ -430,7 +495,7 @@ HTMLWidgets.widget({
 					redrawActiveMark();
 					return false;
 				};
-				
+
 			}
 		}
 
@@ -453,7 +518,7 @@ HTMLWidgets.widget({
 				})
 			}
 			return cols;
-		}	
+		}
 
 		/*
 		 * Finally, pack everything up for Htmlwidgets & Shiny
