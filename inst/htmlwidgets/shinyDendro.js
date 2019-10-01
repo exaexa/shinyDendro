@@ -303,6 +303,17 @@ HTMLWidgets.widget({
 				PActiveMark.fillColor='black';
 				PActiveMark.content='???';
 
+				PActiveRect.onMouseDown = function(event){
+					currentCluster = ' ';
+					redrawActiveMark();
+					return false;
+				};
+				PActiveMark.onMouseDown = function(event){
+					currentCluster = ' ';
+					redrawActiveMark();
+					return false;
+				};
+
 				PLegendGroup = new P.Group();
 
 				showClusterColors();
@@ -405,6 +416,21 @@ HTMLWidgets.widget({
 				var approxBrightness = c.red*c.red*.241 + c.green*c.green*.691 + c.blue*c.blue*.068;
 				t.fillColor=(approxBrightness>0.4)?'black':'white';
 				PLegendGroup.addChild(t);
+
+				r.shinyDendroMark=col.letters[i];
+				r.onMouseDown = function(event){
+					currentCluster = this.shinyDendroMark;
+					redrawActiveMark();
+					return false;
+				};
+
+				t.shinyDendroMark=col.letters[i];
+				t.onMouseDown = function(event){
+					currentCluster = this.shinyDendroMark;
+					redrawActiveMark();
+					return false;
+				};
+				
 			}
 		}
 
