@@ -201,39 +201,41 @@ HTMLWidgets.widget({
 		 * Drawing function
 		 */
 
-		function recalcTreePosition() {
-				var bands=2;
-				bands += nHeatmaps;
+		function recalcTreePosition(applyZoom = true) {
+			var bands=2;
+			bands += nHeatmaps;
 
-				//this is how it would look without any zooming.
-				treeStart=new P.Size(border+bandSize, border);
-				treeSize=new P.Size(
-					P.view.size.width-2*border-(bands+1)*bandSize,
-					P.view.size.height-2*border);
+			//this is how it would look without any zooming.
+			treeStart=new P.Size(border+bandSize, border);
+			treeSize=new P.Size(
+				P.view.size.width-2*border-(bands+1)*bandSize,
+				P.view.size.height-2*border);
 
-				//untransformed bands for positioning the band labels
-				bandsOStart=new P.Size(
-					treeStart.width+treeSize.width,
-					treeStart.height);
-				bandsOSize=new P.Size(
-					bandSize*nHeatmaps,
-					treeSize.height);
+			//untransformed bands for positioning the band labels
+			bandsOStart=new P.Size(
+				treeStart.width+treeSize.width,
+				treeStart.height);
+			bandsOSize=new P.Size(
+				bandSize*nHeatmaps,
+				treeSize.height);
 
-				//calculate Y transform for zooming
-				var yscale = 1/(zoomEnd-zoomBegin);
-				var yshift = zoomBegin*treeSize.height*yscale;
+			//calculate Y transform for zooming
+			var yscale = 1/(zoomEnd-zoomBegin);
+			var yshift = zoomBegin*treeSize.height*yscale;
 
-				//transform all coords to zoomed coordinates
+			//transform all coords to zoomed coordinates
+			if(applyZoom){
 				treeStart.height -= yshift;
 				treeSize.height *= yscale;
+			}
 
-				//copy the coords to bands
-				bandsStart=new P.Size(
-					treeStart.width+treeSize.width,
-					treeStart.height);
-				bandsSize=new P.Size(
-					bandSize*nHeatmaps,
-					treeSize.height);
+			//copy the coords to bands
+			bandsStart=new P.Size(
+				treeStart.width+treeSize.width,
+				treeStart.height);
+			bandsSize=new P.Size(
+				bandSize*nHeatmaps,
+				treeSize.height);
 		}
 
 		function treeRectSize(i, isBranch) {
@@ -290,7 +292,7 @@ HTMLWidgets.widget({
 		function redraw() {
 			P.project.activeLayer.clear();
 
-			recalcTreePosition();
+			recalcTreePosition(false);
 
 			var uc = unassignedColor();
 
@@ -302,7 +304,6 @@ HTMLWidgets.widget({
 				r.applyMatrix=false;
 				r.strokeScaling=false;
 				tree[i].rectangle = r;
-				setTreeRectPosition(i, r);
 
 				if(isBranch) r.style={
 					strokeColor: 'black',
@@ -326,6 +327,10 @@ HTMLWidgets.widget({
 					return false;
 				};
 			}
+
+			recalcTreePosition(true);
+			for(var i=nTree-1; i>=0; --i)
+				setTreeRectPosition(i, tree[i].rectangle);
 
 			// create rasters for the bands and draw them
 			bandRects=new Array(nHeatmaps);

@@ -6,6 +6,8 @@
 #'
 #' @param inputId Name of the associated reactive input
 #' @param cl_height,merge,order Heights, merge matrix and ordering of a dendrogram (as taken e.g. from hclust result).
+#' @param heatmap Matrix with colors and named columns to display next to the dendrogram (may be updated dynamically)
+#' @param assignment Initial assignment of the clusters (character vector, may be updated dynamically)
 #' @param width,height,elementId Widget parameters
 #'
 #' @examples
