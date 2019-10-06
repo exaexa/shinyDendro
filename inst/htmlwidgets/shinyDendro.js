@@ -96,7 +96,10 @@ HTMLWidgets.widget({
 
 		function initData(x)
 		{
+			var doSendOutput=false;
+
 			// feed in the input data
+			if(x.inputId!=inputId) doSendOutput=true;
 			inputId = x.inputId;
 
 			// check if we need to reset the assignment b/c input totally changed
@@ -131,6 +134,7 @@ HTMLWidgets.widget({
 				assignment = new Array(nItems);
 				for(var i=0;i<nItems;++i)
 					assignment[i]=' ';
+				doSendOutput=true;
 			}
 
 			if('assignment' in x) {
@@ -138,6 +142,7 @@ HTMLWidgets.widget({
 					if(i>=x.assignment.length) break;
 					var tmp = String(x.assignment[i])
 					if(tmp.length==0) tmp=' '
+					if(assignment[i]!=tmp[0]) doSendOutput=true;
 					assignment[i]=tmp[0]
 				}
 			}
@@ -156,6 +161,8 @@ HTMLWidgets.widget({
 					tree[l], l,
 					tree[r], r);
 			}
+
+			return doSendOutput;
 		}
 
 		function sendOutput() {
@@ -531,8 +538,10 @@ HTMLWidgets.widget({
 
 		return {
 			renderValue: function(x) {
+				var doSendOutput=false;
 				// initialize Paper.js and event listeners
 				if(P===null) {
+					doSendOutput=true;
 					P = new paper.PaperScope();
 					P.setup(el);
 					P.view.autoUpdate=false;
@@ -564,9 +573,9 @@ HTMLWidgets.widget({
 					}
 				}
 
-				initData(x);
+				if(initData(x)) doSendOutput=true;
 
-				sendOutput();
+				if(doSendOutput) sendOutput();
 				redraw();
 			},
 
