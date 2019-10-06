@@ -5,12 +5,16 @@
 \title{shinyDendro}
 \usage{
 shinyDendro(inputId, cl_height, merge, order, heatmap = NULL,
-  width = NULL, height = NULL, elementId = NULL)
+  assignment = NULL, width = NULL, height = NULL, elementId = NULL)
 }
 \arguments{
 \item{inputId}{Name of the associated reactive input}
 
 \item{cl_height, merge, order}{Heights, merge matrix and ordering of a dendrogram (as taken e.g. from hclust result).}
+
+\item{heatmap}{Matrix with colors and named columns to display next to the dendrogram (may be updated dynamically)}
+
+\item{assignment}{Initial assignment of the clusters (character vector, may be updated dynamically)}
 
 \item{width, height, elementId}{Widget parameters}
 }

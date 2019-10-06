@@ -4,7 +4,7 @@
 \alias{shinyDendro_html}
 \title{The actual HTML output function}
 \usage{
-shinyDendro_html(...)
+shinyDendro_html(..., .noWS = NULL)
 }
 \description{
 (we need canvas for paper.js)
