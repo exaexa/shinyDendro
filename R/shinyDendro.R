@@ -16,13 +16,23 @@
 #' renderShinyDendro(shinyDendro('sdClusters', cl$height, cl$merge, cl$order))
 #' }
 #' @export
-shinyDendro <- function(inputId, cl_height, merge, order, heatmap = NULL, assignment=NULL, width = NULL, height = NULL, elementId = NULL) {
+shinyDendro <- function(inputId,
+  cl_height, merge, order,
+  heatmap = NULL,
+  assignment=NULL,
+  fontScale = 0.66,
+  fontFg = '#ffffffff',
+  fontShadow = '#000000ff',
+  width = NULL, height = NULL, elementId = NULL) {
 
   # forward options using x
   x = list(
     inputId = inputId,
     height=cl_height,
     merge=merge,
+    fontScale=fontScale,
+    fontFg=fontFg,
+    fontShadow=fontShadow,
     order=order)
 
   if(is.vector(heatmap)) stop("heatmap must be either NULL, or a matrix/data frame!")

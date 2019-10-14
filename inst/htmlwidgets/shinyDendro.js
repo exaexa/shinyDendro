@@ -48,6 +48,11 @@ HTMLWidgets.widget({
 		var invOrder = null;
 		var tree = null;
 
+		// misc input
+		var fontScale=0.66;
+		var fontFg='#ffffffff';
+		var fontShadow='#000000ff';
+
 		// input state
 		var currentCluster = ' ';
 
@@ -136,6 +141,13 @@ HTMLWidgets.widget({
 					assignment[i]=' ';
 				doSendOutput=true;
 			}
+
+			if('fontScale' in x)
+				fontScale = x.fontScale;
+			if('fontFg' in x)
+				fontFg = x.fontFg;
+			if('fontShadow' in x)
+				fontShadow = x.fontShadow;
 
 			if('assignment' in x) {
 				for(var i=0; i<assignment.length; ++i) {
@@ -359,12 +371,13 @@ HTMLWidgets.widget({
 				var t = new P.PointText(tp);
 				t.content = heatmapNames[i];
 				t.justification='left';
-				t.fontSize=(bandSize*.66)+'px';
-				t.fillColor='white';
+				t.fontSize=(bandSize*fontScale)+'px';
+				t.fillColor=fontFg;
 				t.rotate(270, tp);
 				t.style={
-					shadowColor:'black',
-					shadowBlur:1
+					shadowColor:fontShadow,
+					shadowBlur:1,
+					shadowOffset:new P.Point(1,1)
 				};
 			}
 

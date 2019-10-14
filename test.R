@@ -36,7 +36,10 @@ server <- function(input, output) {
       clust$merge,
       clust$order,
       colors,
-      assignment=c("a"," ","b","c")
+      assignment=c("a"," ","b","c"),
+      fontScale=.66,
+      fontFg='#ffffffff',
+      fontShadow='#000000ff'
     )
   })
   output$sdPlot <- renderPlot(
