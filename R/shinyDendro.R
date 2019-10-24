@@ -23,6 +23,7 @@ shinyDendro <- function(inputId,
   fontScale = 0.66,
   fontFg = '#ffffffff',
   fontShadow = '#000000ff',
+  key = NULL,
   width = NULL, height = NULL, elementId = NULL) {
 
   # forward options using x
@@ -30,10 +31,11 @@ shinyDendro <- function(inputId,
     inputId = inputId,
     height=cl_height,
     merge=merge,
+    order=order,
     fontScale=fontScale,
     fontFg=fontFg,
     fontShadow=fontShadow,
-    order=order)
+    key=key)
 
   if(is.vector(heatmap)) stop("heatmap must be either NULL, or a matrix/data frame!")
 
@@ -99,3 +101,11 @@ renderShinyDendro <- function(expr, env = parent.frame(), quoted = FALSE) {
   if (!quoted) { expr <- substitute(expr) } # force quoted
   htmlwidgets::shinyRenderWidget(expr, shinyDendroOutput, env, quoted = TRUE)
 }
+
+#' Get the key from shinyDendro output
+#' @export
+getShinyDendroKey <- function(output) output$key
+
+#' Get the assignment from shinyDendro output
+#' @export
+getShinyDendroAssignment <- function(output) unlist(output$assignment)

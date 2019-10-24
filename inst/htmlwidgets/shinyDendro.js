@@ -56,8 +56,11 @@ HTMLWidgets.widget({
 		// input state
 		var currentCluster = ' ';
 
-		// output data
+		// cluster selection data
+		var rcvdAssignment = null;
+		var sentAssignment = null;
 		var assignment = null;
+		var assignmentKey = null;
 
 		// zoom
 		var zoomBegin = 0;
@@ -99,10 +102,20 @@ HTMLWidgets.widget({
 			else return x===y;
 		}
 
+		function normalizeAssignment(a) {
+			var len=0;
+			if(Array.isArray(a)) len=a.length;
+			res=new Array(a.length);
+			for(var i=0; i<len; ++i){
+				var tmp=String(a[i])
+				if(tmp.length==0) tmp=' ';
+				res[i]=tmp[0];
+			}
+			return res;
+		}
+
 		function initData(x)
 		{
-			var doSendOutput=false;
-
 			// feed in the input data
 			if(x.inputId!=inputId) doSendOutput=true;
 			inputId = x.inputId;
@@ -134,12 +147,36 @@ HTMLWidgets.widget({
 			for(var i=0;i<nItems;++i)
 				invOrder[order[i]]=i;
 
+			if('key' in x)
+				assignmentKey = x.key;
+
+			reassign=false;
+
+			if('assignment' in x) {
+				rcvdAssignment = normalizeAssignment(x.assignment);
+				reassign=true;
+			}
+
 			if(needsReset || assignment===null) {
 				resetZoom();
+				var oldAssignment = assignment;
 				assignment = new Array(nItems);
-				for(var i=0;i<nItems;++i)
-					assignment[i]=' ';
-				doSendOutput=true;
+				for(var i=0;i<nItems;++i) {
+					if(oldAssignment!==null && i<oldAssignment.length)
+						assignment[i]=oldAssignment[i];
+					else if(rcvdAssignment!==null && i<rcvdAssignment.length)
+						assignment[i]=rcvdAssignment[i];
+					else assignment[i]=' ';
+				}
+			}
+
+			if(reassign) {
+				for(var i=0; i<nItems; ++i) {
+					if(i<rcvdAssignment.length)
+						assignment[i]=rcvdAssignment[i];
+					else
+						assignment[i]=' ';
+				}
 			}
 
 			if('fontScale' in x)
@@ -148,16 +185,6 @@ HTMLWidgets.widget({
 				fontFg = x.fontFg;
 			if('fontShadow' in x)
 				fontShadow = x.fontShadow;
-
-			if('assignment' in x) {
-				for(var i=0; i<assignment.length; ++i) {
-					if(i>=x.assignment.length) break;
-					var tmp = String(x.assignment[i])
-					if(tmp.length==0) tmp=' '
-					if(assignment[i]!=tmp[0]) doSendOutput=true;
-					assignment[i]=tmp[0]
-				}
-			}
 
 			tree = new Array(2*nItems-1);
 			// fill in the leaves
@@ -177,8 +204,10 @@ HTMLWidgets.widget({
 			return doSendOutput;
 		}
 
-		function sendOutput() {
-			Shiny.onInputChange(inputId, assignment);
+		function sendOutput(forced=false) {
+			if(!forced && arrays_equal(assignment, sentAssignment))	return;
+			Shiny.onInputChange(inputId, {assignment: assignment, key:assignmentKey});
+			sentAssignment=assignment.slice();
 		}
 
 		/*
@@ -424,7 +453,7 @@ HTMLWidgets.widget({
 				if(ct.clusterId===null) continue;
 				assignment[ct.clusterId]=currentCluster;
 			}
-			sendOutput();
+			sendOutput(false);
 			showClusterColors();
 		}
 
@@ -551,10 +580,10 @@ HTMLWidgets.widget({
 
 		return {
 			renderValue: function(x) {
-				var doSendOutput=false;
+				var forceSendOutput=false;
 				// initialize Paper.js and event listeners
 				if(P===null) {
-					doSendOutput=true;
+					forceSendOutput=true;
 					P = new paper.PaperScope();
 					P.setup(el);
 					P.view.autoUpdate=false;
@@ -586,9 +615,9 @@ HTMLWidgets.widget({
 					}
 				}
 
-				if(initData(x)) doSendOutput=true;
+				if(initData(x)) forceSendOutput=true;
 
-				if(doSendOutput) sendOutput();
+				sendOutput(forceSendOutput);
 				redraw();
 			},
 

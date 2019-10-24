@@ -39,14 +39,15 @@ server <- function(input, output) {
       assignment=c("a"," ","b","c"),
       fontScale=.66,
       fontFg='#ffffffff',
-      fontShadow='#000000ff'
+      fontShadow='#000000ff',
+      key="someKey"
     )
   })
   output$sdPlot <- renderPlot(
     if(!is.null(input$sdClusters)) {
       par(mar=c(0,0,0,0))
       EmbedSOM::PlotEmbed(e, alpha=.3, pch=19, xaxt='n', yaxt='n',
-                          clust=setNAs(input$sdClusters))
+                          clust=setNAs(unlist(input$sdClusters$assignment)))
     } else NULL
   )
 }

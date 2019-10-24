@@ -5,7 +5,9 @@
 \title{shinyDendro}
 \usage{
 shinyDendro(inputId, cl_height, merge, order, heatmap = NULL,
-  assignment = NULL, width = NULL, height = NULL, elementId = NULL)
+  assignment = NULL, fontScale = 0.66, fontFg = "#ffffffff",
+  fontShadow = "#000000ff", key = NULL, width = NULL,
+  height = NULL, elementId = NULL)
 }
 \arguments{
 \item{inputId}{Name of the associated reactive input}
